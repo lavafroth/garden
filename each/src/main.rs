@@ -78,12 +78,10 @@ fn main() -> Result<()> {
                 }
                 child
             }
-            Approach::Over => {
-                command.arg(line);
-                command
-                    .spawn()
-                    .with_context(|| format!("failed to spawn process: {command:?}"))?
-            }
+            Approach::Over => command
+                .arg(line)
+                .spawn()
+                .with_context(|| format!("failed to spawn process: {command:?}"))?,
         };
 
         child
