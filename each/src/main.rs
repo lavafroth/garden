@@ -13,7 +13,7 @@ DESCRIPTION:
 
 SUBCOMMANDS:
     into    Pipes each line from stdin into the standard input of the command.
-            Example: cat list.txt | each into grep 'pattern'
+            Example: cat list.txt | each into base64 -d
 
     over    Appends each line from stdin as a trailing argument to the command.
             Example: cat list.txt | each over echo "Item:"
