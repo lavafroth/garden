@@ -1,26 +1,46 @@
 use anyhow::{Context, Result};
+use std::env::Args;
 use std::io::Write;
+use std::iter::{Peekable, Skip};
 use std::process::exit;
 use std::{io::stdin, process::Command};
 
 fn usage() {
     let usage_str = r#"
-USAGE:
-    each [SUBCOMMAND] [COMMAND]
+`each <PREDICATE> [SUBCOMMAND] [COMMAND]`
 
-DESCRIPTION:
-    Processes standard input line by line, executing the specified command for each entry.
+### Subcommands
+#### `into`
 
-SUBCOMMANDS:
-    into    Pipes each line from stdin into the standard input of the command.
-            Example: cat list.txt | each into base64 -d
+Pipes each line from standard input into the command, one command invocation per line.
 
-    over    Appends each line from stdin as a trailing argument to the command.
-            Example: cat list.txt | each over echo "Item:"
+Example: Decode lines of base64 encoded data by piping each line into the base64 command.
 
-EXAMPLES:
-    cat names.txt | each into wc -c
-    cat files.txt | each over rm
+```sh
+cat base64-encoded-lines.txt | each into base64 --decode
+```
+
+#### `over`
+
+Appends each line from standard input as a trailing argument to the command.
+
+Example: Wrap each line in the input in HTML list item tags.
+
+```sh
+cat list.txt | each printf "<li>%s</li>\n"
+```
+
+### Predicates
+
+#### `with newline`
+
+Preserve the trailing newline of the input lines before passing them to the spawned command.
+
+Example: Encode lines to base64 data by piping each line *with trailing newlines* into the base64 command.
+
+```sh
+cat lines.txt | each with newline into base64
+```
 "#;
     eprintln!("{usage_str}");
 }
@@ -30,18 +50,31 @@ pub enum Approach {
     Over,
 }
 
+fn has_with_newline_predicate(args: &mut Peekable<Skip<Args>>) -> bool {
+    for s in ["with", "newline"] {
+        if !args.peek().is_some_and(|arg| arg == s) {
+            return false;
+        }
+        args.next();
+    }
+    true
+}
+
 fn main() -> Result<()> {
-    let mut args = std::env::args().skip(1);
+    let mut args = std::env::args().skip(1).peekable();
+    let with_newline = has_with_newline_predicate(&mut args);
     let Some(approach) = args.next() else {
         usage();
         exit(1);
     };
+
     let Some(program) = args.next() else {
         usage();
         exit(1);
     };
 
-    let args: Vec<_> = args.collect();
+    let args: Vec<String> = args.collect();
+
     let approach = match approach.as_str() {
         "into" => Approach::Into,
         "over" => Approach::Over,
@@ -56,10 +89,14 @@ fn main() -> Result<()> {
     };
 
     for line in stdin().lines() {
-        let Ok(line) = line else {
+        let Ok(mut line) = line else {
             usage();
             exit(1);
         };
+
+        if with_newline {
+            line.push('\n');
+        }
         let mut command = Command::new(&program);
         command.args(&args);
 
@@ -71,8 +108,8 @@ fn main() -> Result<()> {
                     .with_context(|| format!("failed to spawn process: {command:?}"))?;
 
                 if let Some(mut stdin) = child.stdin.take() {
-                    let repr = &line[0..line.len().min(16)];
                     stdin.write_all(line.as_bytes()).with_context(|| {
+                        let repr = &line[..line.len().min(16)];
                         format!("failed to write {repr:?} to stdin of child process: {command:?}")
                     })?;
                 }
