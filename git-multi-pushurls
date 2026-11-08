@@ -1,0 +1,30 @@
+#!/usr/bin/env sh
+
+setall() {
+    git remote set-url --add --push all "$1"
+}
+
+if test $# = 0
+then
+    echo "usage: $0 git@remote-one:user/repo ..."
+    exit 1
+fi
+
+if test "$(git remote show | grep --quiet all)" != 0
+then
+    PUSHURL="$(git remote show -n origin | sed --quiet --regexp-extended 's/\s+Push  URL:\s//p')"
+    git remote add all "$PUSHURL"
+    setall "$PUSHURL"
+fi
+
+for remote in "$@"
+do
+    setall "$remote"
+done
+
+cat << EOF
+now you can run
+
+    git push all
+
+EOF

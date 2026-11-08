@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+set -euo
+git log
+printf "Enter the hashes of the commit to redate separate by spaces: "
+read -r hashes
+for hash in $hashes; do
+	printf "Enter the date and optionally time for commit %s (example: yesterday): " "$hash"
+	read -r target_date
+	target_date="$(date -d "$target_date")"
+	short_hash="$(echo "$hash" | cut -c 1-7)"
+	GIT_SEQUENCE_EDITOR="sed -i 's/pick $short_hash/edit $short_hash/g'" git rebase -i "$hash^"
+	GIT_COMMITTER_DATE="$target_date" git commit --amend --no-edit --date "$target_date"
+	git rebase --continue
+	reflog_delete_count="$(git reflog | grep "rebase (start): checkout $hash^" --line-number | cut -d: -f1)"
+	for _ in $(seq "$reflog_delete_count"); do
+		git reflog delete 'HEAD@{0}'
+	done
+done

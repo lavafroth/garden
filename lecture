@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+VIDEO="$1"
+if test -z $VIDEO; then
+  VIDEO="$(wl-paste)"
+fi
+mpv --speed=1.5 --start=00:00:14 --cache-pause-wait=14 --script-opts='skipsilence-enabled=yes,skipsilence-threshold_db=-18' --vf=sub,negate "$VIDEO"
