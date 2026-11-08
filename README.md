@@ -7,7 +7,7 @@ Garden of POSIX shell scripts.
 Check your scripts with the following before opening a PR:
 
 ```sh
-shellcheck -s sh ./*[!md]
+shellcheck -s sh $(grep '#!/usr/bin/env' --recursive --files-with-matches)
 ```
 
 Thank you very much if you do make contributions.
