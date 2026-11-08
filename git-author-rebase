@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
-set -euo pipefail
+set -euo
 export GIT_SEQUENCE_EDITOR='sed -i s/^pick/edit/g'
 rm -frv ".git/rebase-merge"
-AUTHOR="$1"
+author="$1"
 
 if test -z "$author"; then
     echo "usage: $0 'author name <author@email.com>'"
@@ -14,6 +14,6 @@ git rebase -i --root
 NUMBER_OF_REBASES="$(grep -c edit .git/rebase-merge/git-rebase-todo)"
 
 for _ in $(seq "$NUMBER_OF_REBASES"); do
-    git commit --amend --author="$AUTHOR" --no-edit
+    git commit --amend --author="$author" --no-edit
     git rebase --continue
 done
